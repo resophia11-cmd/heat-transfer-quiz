@@ -1,0 +1,832 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>열 이동 퀴즈 대결</title>
+<style>
+:root {
+  color-scheme: light;
+  font-family: "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
+  color: #f6f8ff;
+  background: #121d37;
+  font-synthesis: none;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: radial-gradient(ellipse at 19% 0, #263e71, transparent 60%), #121d37;
+}
+button, select { font: inherit; }
+button { cursor: pointer; }
+button:focus-visible, select:focus-visible {
+  outline: 3px solid #ffc451;
+  outline-offset: 3px;
+}
+button:disabled { cursor: default; }
+[hidden] { display: none !important; }
+
+.shell {
+  min-height: 100dvh;
+  max-width: 2400px;
+  margin: auto;
+  padding: clamp(12px, 1.8vw, 30px);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(10px, 1.3vw, 20px);
+}
+.top, .top nav, .controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.top {
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.top h1 {
+  margin: 0;
+  font-size: clamp(25px, 2.8vw, 56px);
+  font-weight: 850;
+  letter-spacing: -.07em;
+  line-height: 1.15;
+}
+.top nav { flex-wrap: wrap; }
+.top button, .controls button, .player-count select {
+  border: 1px solid #54688f;
+  border-radius: 8px;
+  background: #25375c;
+  color: #f9fbff;
+  padding: 9px 13px;
+  font-weight: 700;
+}
+.top button[aria-pressed="true"] {
+  background: #d8e6ff;
+  color: #142748;
+  border-color: #d8e6ff;
+}
+.top button:disabled { opacity: .58; }
+.controls { justify-content: center; flex-wrap: wrap; }
+.controls .primary {
+  min-height: 54px;
+  min-width: min(14rem, 85vw);
+  padding: 12px 28px;
+  background: #ffd064;
+  border-color: #ffd064;
+  color: #211800;
+  font-size: clamp(18px, 1.6vw, 32px);
+  box-shadow: 0 4px 0 #b48028;
+}
+.controls .primary:active { box-shadow: none; transform: translateY(2px); }
+
+.clock {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px 14px;
+  padding: 8px clamp(12px, 1.8vw, 28px) 12px;
+  background: #0d172d;
+  border: 1px solid #374968;
+  border-radius: 15px;
+}
+.clock span {
+  color: #d3ddee;
+  font-weight: 700;
+  font-size: clamp(12px, 1.35vw, 25px);
+  word-break: keep-all;
+}
+.clock strong {
+  color: #ffda83;
+  font-size: clamp(46px, 5vw, 88px);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  letter-spacing: -.065em;
+}
+.track {
+  grid-column: 1 / -1;
+  height: 7px;
+  border-radius: 20px;
+  background: #2c3c59;
+  overflow: hidden;
+}
+.track i {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: #ffcb58;
+  transform-origin: left;
+}
+.clock.urgent { border-color: #e57f72; }
+.clock.urgent strong { color: #ff9c8d; }
+.clock.urgent .track i { background: #ff9c8d; }
+
+.rules, .end-title { margin: 0; text-align: center; }
+.rules {
+  color: #d7e0f2;
+  font-weight: 700;
+  font-size: clamp(13px, 1.25vw, 24px);
+}
+.player-count {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-weight: 750;
+  font-size: clamp(15px, 1.25vw, 23px);
+}
+.player-count select { padding: 7px 10px; }
+
+.arena { display: grid; gap: clamp(4px, 1vw, 16px); flex: 1; }
+.station {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: #f9f9fc;
+  color: #142342;
+  border: 1px solid var(--accent);
+  border-radius: 13px;
+  overflow: hidden;
+}
+.station:nth-child(1) { --accent: #244fae; --tint: #e8f0ff; }
+.station:nth-child(2) { --accent: #1d6748; --tint: #e1f4e9; }
+.station:nth-child(3) { --accent: #8d4211; --tint: #fff0de; }
+.station:nth-child(4) { --accent: #634090; --tint: #f1e9fa; }
+.station:nth-child(5) { --accent: #943653; --tint: #fbe9ef; }
+.station:nth-child(6) { --accent: #17646f; --tint: #e2f3f5; }
+
+.station-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: clamp(7px, 1vw, 16px);
+  background: var(--accent);
+  color: #fff;
+}
+.station h2 {
+  margin: 0;
+  font-size: clamp(13px, 1.75vw, 32px);
+  letter-spacing: -.06em;
+  overflow-wrap: anywhere;
+}
+.score {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  padding: 1px 6px 2px;
+  border-radius: 6px;
+  background: #fff;
+  color: var(--accent);
+  font-weight: 850;
+  font-size: clamp(18px, 2.2vw, 44px);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.score small { font-size: .48em; }
+.station .waiting { color: var(--accent); margin: auto 6px; padding-block: 10px; }
+
+.station .question, .number, .answers, .feedback { margin-inline: clamp(6px, .9vw, 16px); }
+.number {
+  margin-top: clamp(8px, 1.2vh, 14px);
+  color: var(--accent);
+  font-size: clamp(11px, 1.07vw, 20px);
+  font-weight: 800;
+}
+.station .question {
+  margin-block: 5px clamp(8px, 1.1vh, 14px);
+  font-size: clamp(14px, 1.9vw, 36px);
+  font-weight: 750;
+  line-height: 1.4;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.answers {
+  margin-top: auto;
+  display: grid;
+  gap: clamp(4px, .8vh, 10px);
+  touch-action: none;
+  user-select: none;
+}
+.answer {
+  min-height: clamp(43px, 7.3vh, 88px);
+  border: 2px solid transparent;
+  border-radius: 9px;
+  background: var(--tint);
+  color: var(--accent);
+  font-size: clamp(16px, 2.25vw, 43px);
+  font-weight: 850;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.answer:active:not(:disabled) { border-color: currentColor; }
+.answer.correct { background: #c7f0d7; color: #174e2f; border-color: #238455; }
+.answer.wrong { background: #ffdedb; color: #8c2925; border-color: #bf514a; }
+.feedback {
+  min-height: 2.7em;
+  margin-block: 5px;
+  font-weight: 800;
+  line-height: 1.3;
+  font-size: clamp(11px, 1.05vw, 20px);
+  word-break: keep-all;
+}
+.feedback.good { color: #236844; }
+.feedback.bad { color: #94312c; }
+.arena.crowded .station h2 { font-size: clamp(12px, 1.38vw, 26px); }
+.arena.crowded .question { font-size: clamp(12px, 1.57vw, 30px); }
+.arena.crowded .answer { font-size: clamp(13px, 1.9vw, 34px); padding-inline: 0; }
+
+.end-title { font-size: clamp(25px, 2.5vw, 46px); }
+.results {
+  display: grid;
+  gap: 8px;
+  width: min(760px, 100%);
+  margin: 0 auto;
+  padding: 0;
+  list-style: none;
+}
+.results li {
+  display: grid;
+  grid-template-columns: 5em minmax(0, 1fr) auto;
+  gap: 8px;
+  border: 1px solid #4e6287;
+  border-radius: 9px;
+  padding: 9px 14px;
+  background: #273b61;
+  font-size: clamp(15px, 1.85vw, 30px);
+  overflow-wrap: anywhere;
+}
+.results li:first-child { border-color: #ffd064; }
+.results b { color: #ffda83; }
+dialog {
+  color: #142342;
+  background: #f9f9fc;
+  border: 0;
+  border-radius: 15px;
+  width: min(1000px, 94vw);
+  max-height: 88vh;
+  padding: 22px;
+}
+dialog::backdrop { background: #091227d4; }
+.bank-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.bank-head h2 { margin: 0; }
+.close {
+  border: 1px solid #c0cade;
+  border-radius: 8px;
+  color: #142342;
+  background: #e9effb;
+  padding: 8px 12px;
+  font-weight: 700;
+}
+.bank { padding-left: 1.7em; }
+.bank li { padding: 10px 2px; border-bottom: 1px solid #d8e0ec; }
+.bank p { margin: 4px 0 0; color: #415573; }
+</style>
+</head>
+<body>
+<main class="shell">
+<header class="top">
+  <h1>열 이동 퀴즈 대결</h1>
+  <nav aria-label="화면 설정">
+    <button type="button" id="bankButton">문제 보기</button>
+    <button type="button" id="effectsButton" aria-pressed="true">효과음</button>
+    <button type="button" id="musicButton" aria-pressed="false">배경음악</button>
+    <button type="button" id="screenButton">전체 화면</button>
+  </nav>
+</header>
+<div class="clock" id="clock">
+  <span id="status" aria-live="polite">전도 · 대류 · 복사</span>
+  <strong id="seconds" aria-label="남은 시간 60초">60</strong>
+  <div class="track" aria-hidden="true"><i id="progress"></i></div>
+</div>
+<p class="rules" id="rules">자기 색깔 칸에서 답을 터치하세요 · 정답 +2점 · 오답 −1점과 2초 대기</p>
+<label class="player-count" id="countControl">참가자 수
+  <select id="playerCount">
+    <option value="2">2명</option>
+    <option value="3">3명</option>
+    <option value="4" selected>4명</option>
+    <option value="5">5명</option>
+    <option value="6">6명</option>
+  </select>
+</label>
+<section class="arena" id="arena" aria-label="참가자별 대결 구역"></section>
+<h2 class="end-title" id="endTitle" hidden>최종 순위</h2>
+<ol class="results" id="results" hidden></ol>
+<div class="controls">
+  <button type="button" class="primary" id="start">대결 시작</button>
+  <button type="button" class="primary" id="again" hidden>한 판 더</button>
+  <button type="button" id="changeCount" hidden>참가자 수 바꾸기</button>
+</div>
+</main>
+<dialog id="bankDialog" aria-labelledby="bankTitle">
+  <div class="bank-head"><h2 id="bankTitle">문제 보기</h2><form method="dialog"><button class="close">닫기</button></form></div>
+  <ol class="bank" id="bankList"></ol>
+</dialog>
+<script>
+'use strict';
+
+const categories = ['전도', '대류', '복사'];
+const questionBank = [
+  ["햇볕 아래 둔 초콜릿이 녹았어요.", "복사"],
+  ["구리판에 붙인 열 변색 붙임딱지의 색이 가열한 곳부터 차례로 변해요.", "전도"],
+  ["촛불 옆에 손을 가까이 대면 따뜻해요.", "복사"],
+  ["풍등 속 불을 켜면 풍등이 하늘로 날아올라요.", "대류"],
+  ["거울로 햇빛을 반사해 손등에 비추면 손등이 따뜻해져요.", "복사"],
+  ["따뜻한 밥 위에 올린 버터가 사르르 녹아요.", "전도"],
+  ["공기가 없는 달에서도 햇빛을 받는 쪽은 아주 뜨거워요.", "복사"],
+  ["장갑을 벗고 눈을 만졌더니 손이 닿은 곳의 눈이 녹았어요.", "전도"],
+  ["손바닥 위에 얼음을 올려놓았더니 얼음이 녹았어요.", "전도"],
+  ["손바닥을 차가운 유리창에 대고 있으면 손이 차가워져요.", "전도"],
+  ["열기구 속 공기를 데우면 열기구가 하늘로 떠올라요.", "대류"],
+  ["햇볕을 받은 미끄럼틀 표면이 뜨겁게 달궈졌어요.", "복사"],
+  ["추운 겨울날 쇠 철봉을 맨손으로 잡으면 손이 금방 차가워져요.", "전도"],
+  ["창문 위쪽과 아래쪽을 함께 열면 공기가 잘 순환해요.", "대류"],
+  ["아이스크림 컵을 오래 들고 있으면 손이 차가워져요.", "전도"],
+  ["찜통에서 뜨거운 수증기가 위로 올라가 만두를 익혀요.", "대류"],
+  ["전기장판 위에 누우면 등이 따뜻해져요.", "전도"],
+  ["뜨거운 국에 담가 둔 쇠숟가락의 손잡이까지 뜨거워졌어요.", "전도"],
+  ["햇볕 아래 둔 물통의 물이 미지근해졌어요.", "복사"],
+  ["여름 한낮 아스팔트 도로가 뜨겁게 달궈져요.", "복사"],
+  ["굴뚝으로 연기가 위로 빠져나가요.", "대류"],
+  ["고데기로 머리카락을 집어 곧게 펴요.", "전도"],
+  ["에어프라이어는 뜨거운 공기를 빙글빙글 돌려 음식을 익혀요.", "대류"],
+  ["금속 숟가락을 뜨거운 물에 넣으면 손잡이까지 뜨거워져요.", "전도"],
+  ["따뜻한 물주머니를 이불 속 발밑에 두면 발이 따뜻해요.", "전도"],
+  ["고추를 햇볕에 널어 말려요.", "복사"],
+  ["촛불 바로 위에 손을 대면 옆에 댔을 때보다 훨씬 뜨거워요.", "대류"],
+  ["반사판을 동그랗게 모은 태양열 조리기로 음식을 익혀요.", "복사"],
+  ["갓 찐 호빵을 손으로 들었더니 손이 뜨거워요.", "전도"],
+  ["체온계를 겨드랑이에 끼워 체온을 재요.", "전도"],
+  ["냄비에 물을 끓이면 물이 위아래로 빙글빙글 돌아요.", "대류"],
+  ["난방을 켠 교실에서 천장 근처가 바닥보다 더 따뜻해요.", "대류"],
+  ["프라이팬을 불에 올려 두면 불이 닿지 않은 가장자리까지 뜨거워져요.", "전도"],
+  ["붕어빵 틀이 불에 달궈지면 틀 안의 반죽이 구워져요.", "전도"],
+  ["햇볕을 쬐면 몸이 따뜻해져요.", "복사"],
+  ["햇빛이 비치는 쪽 벽돌담이 그늘진 담보다 따뜻해요.", "복사"],
+  ["친구가 오래 앉아 있던 의자에 앉으니 의자가 따뜻해요.", "전도"],
+  ["펄펄 끓는 뚝배기를 맨손으로 잡으면 아주 뜨거워요.", "전도"],
+  ["햇볕이 드는 양지의 눈이 그늘의 눈보다 빨리 녹아요.", "복사"],
+  ["우주에서 햇빛을 받는 쪽 우주선 표면은 매우 뜨거워져요.", "복사"],
+  ["미역국을 데우면 냄비 속 미역이 위아래로 움직여요.", "대류"],
+  ["난방기는 방의 아래쪽에 설치해요.", "대류"],
+  ["차가운 캔 음료를 손에 쥐면 손이 시원해져요.", "전도"],
+  ["겨울 아침 맨발로 차가운 타일 바닥을 밟으면 발이 시려요.", "전도"],
+  ["에어컨을 켜면 발밑부터 먼저 시원해져요.", "대류"],
+  ["향을 피우면 연기가 위로 피어올라요.", "대류"],
+  ["햇볕 드는 베란다에 널어 둔 이불이 따뜻해졌어요.", "복사"],
+  ["고양이가 햇볕 드는 곳에 누워 낮잠을 자요.", "복사"],
+  ["얼음물에 손을 넣으면 손이 금방 차가워져요.", "전도"],
+  ["캠핑장 난로 쪽으로 손바닥을 펼쳐 보이면 손바닥이 따뜻해져요.", "복사"],
+  ["사우나에서는 위쪽 자리가 아래쪽 자리보다 더 뜨거워요.", "대류"],
+  ["식당에서 빨간 보온 램프 아래 음식이 따뜻하게 유지돼요.", "복사"],
+  ["달군 프라이팬 위에 달걀을 깨뜨리면 달걀이 익어요.", "전도"],
+  ["햇볕 아래 세워 둔 검은 자동차가 흰 자동차보다 더 뜨거워져요.", "복사"],
+  ["뜨거운 다리미로 옷을 다려 주름을 펴요.", "전도"],
+  ["물을 가열하면 바닥의 잉크가 물과 함께 위로 올라갔다가 옆으로 퍼져 내려와요.", "대류"],
+  ["은박지에 싸서 구운 감자를 맨손으로 들면 뜨거워요.", "전도"],
+  ["보리차를 끓이면 보리 알갱이가 오르락내리락해요.", "대류"],
+  ["핫팩을 손에 꼭 쥐고 있으면 손이 따뜻해져요.", "전도"],
+  ["촛불 위에 매단 종이 뱀이 빙글빙글 돌아요.", "대류"],
+  ["겨울에 이층 침대 위층이 아래층보다 더 따뜻해요.", "대류"],
+  ["전기 주전자는 바닥만 데우는데도 물 전체가 끓어요.", "대류"],
+  ["햇빛이 드는 창가 바닥이 따뜻해요.", "복사"],
+  ["쇠막대의 한쪽 끝을 가열하면 반대쪽 끝까지 점점 뜨거워져요.", "전도"],
+  ["주전자 바닥만 가열해도 물 전체가 골고루 뜨거워져요.", "대류"],
+  ["도시락 가방에 아이스팩을 넣어 두면 맞닿은 음식이 차갑게 유지돼요.", "전도"],
+  ["돌솥 바닥에 닿은 밥이 노릇노릇 누룽지가 돼요.", "전도"],
+  ["차가운 물이 든 수조에 따뜻한 색깔 물을 넣으면 색깔 물이 위로 올라가요.", "대류"],
+  ["병아리 상자 위에 보온 전구를 켜 줘요.", "복사"],
+  ["한 손은 햇빛에, 한 손은 그늘에 두면 햇빛 속 손이 더 따뜻해요.", "복사"],
+  ["불이 나면 몸을 낮추고 대피해요.", "대류"],
+  ["전기난로 앞에 서면 난로를 향한 몸 앞쪽만 따뜻해요.", "복사"],
+  ["벽난로 앞에 앉으면 몸 앞쪽이 따뜻해요.", "복사"],
+  ["뜨거운 코코아에 꽂아 둔 금속 빨대가 뜨거워졌어요.", "전도"],
+  ["헤어드라이어로 데운 공기를 비닐봉지에 담으면 봉지가 위로 떠올라요.", "대류"],
+  ["돋보기로 햇빛을 모으면 종이가 타요.", "복사"],
+  ["여름에 양산을 쓰면 덜 더워요.", "복사"],
+  ["켜 둔 난로 위쪽에 매단 모빌이 저절로 빙글빙글 돌아요.", "대류"],
+  ["열이 나는 이마에 차가운 물수건을 올려요.", "전도"],
+  ["겨울에 햇살이 드는 창가에 앉으면 유리창 너머로도 따뜻해요.", "복사"],
+  ["달군 와플 기계에 반죽을 넣으면 와플이 구워져요.", "전도"],
+  ["여름에 검은 옷을 입으면 흰 옷보다 더 더워요.", "복사"],
+  ["따뜻한 온돌 방바닥에 앉으면 엉덩이가 따뜻해요.", "전도"],
+  ["같은 교실에 있던 금속 의자가 나무 의자보다 더 차갑게 느껴져요.", "전도"],
+  ["냉장고 문을 열면 발 쪽이 시원해져요.", "대류"],
+  ["구름 낀 날보다 밝은 날 햇볕이 더 따뜻하게 느껴져요.", "복사"],
+  ["따뜻한 물이 든 수조에 차가운 색깔 물을 넣으면 색깔 물이 아래로 가라앉아요.", "대류"],
+  ["적외선 전기히터를 켜면 바로 앞에 있는 발이 금방 따뜻해져요.", "복사"],
+  ["지붕 위 태양열 온수기로 물을 데워요.", "복사"],
+  ["창문 아래 라디에이터를 켜 두면 방 안 공기가 돌며 방 전체가 따뜻해져요.", "대류"],
+  ["도마뱀이 아침에 햇볕을 쬐며 몸을 데워요.", "복사"],
+  ["여름에 커튼을 치면 방이 덜 더워져요.", "복사"],
+  ["따뜻하게 데운 칼로 차가운 버터를 자르면 잘 잘려요.", "전도"],
+  ["모닥불 앞에 앉아 있으면 얼굴이 뜨거워져요.", "복사"],
+  ["지구는 태양 덕분에 따뜻해요.", "복사"],
+  ["꽁꽁 언 손으로 친구의 따뜻한 손을 잡으면 내 손이 따뜻해져요.", "전도"],
+  ["꽁꽁 언 고기를 금속 쟁반 위에 올려 두면 더 빨리 녹아요.", "전도"],
+  ["숯불 옆에 손을 가까이 대면 따뜻해요.", "복사"],
+  ["겨울에 큰 창문 앞에 서 있으면 발밑으로 찬 바람이 느껴져요.", "대류"],
+  ["모닥불 위로 불티가 날아올라요.", "대류"]
+].map(([prompt, answer]) => ({prompt, category: categories.indexOf(answer)}));
+
+const byId = (id) => document.getElementById(id);
+const arena = byId('arena');
+const duration = 60_000;
+const feedbackDelay = 2_000;
+let phase = 'setup';
+let deadline = 0;
+let animation = 0;
+const countSelect = byId('playerCount');
+let activePlayers = [];
+let audio;
+let musicTimer;
+let musicBus;
+let drumNoise;
+
+const players = Array.from({length: 6}, (_, index) => {
+  const card = document.createElement('article');
+  card.className = 'station';
+  card.innerHTML = `
+    <header class="station-head"><h2></h2><span class="score"><b>0</b><small>점</small></span></header>
+    <p class="rules waiting">대결 시작을 기다려요</p>
+    <div class="number" hidden></div>
+    <p class="question" hidden></p>
+    <div class="answers" role="group" aria-label="${index + 1}번 참가자 답안" hidden></div>
+    <p class="feedback" hidden></p>`;
+  arena.append(card);
+  const answers = card.querySelector('.answers');
+  const buttons = categories.map((category) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'answer';
+    button.textContent = category;
+    answers.append(button);
+    return button;
+  });
+  const player = {
+    card, title: card.querySelector('h2'),
+    scoreView: card.querySelector('.score b'), waiting: card.querySelector('.waiting'),
+    number: card.querySelector('.number'), question: card.querySelector('.question'),
+    feedback: card.querySelector('.feedback'), answers, buttons, pointers: new Map(),
+    queue: [], current: null, position: 0, score: 0, revision: 0, locked: false, timer: 0
+  };
+  player.title.textContent = `${index + 1}번 참가자`;
+  buttons.forEach((button, choice) => {
+    button.addEventListener('pointerdown', (event) => {
+      if (event.button !== 0 || button.disabled || phase !== 'playing') return;
+      player.pointers.set(event.pointerId, {choice, revision: player.revision});
+      button.setPointerCapture(event.pointerId);
+    });
+    button.addEventListener('pointerup', (event) => {
+      const press = player.pointers.get(event.pointerId);
+      player.pointers.delete(event.pointerId);
+      if (!press || press.choice !== choice || press.revision !== player.revision) return;
+      if (button.contains(document.elementFromPoint(event.clientX, event.clientY))) answer(player, choice);
+    });
+    for (const eventName of ['pointercancel', 'lostpointercapture']) {
+      button.addEventListener(eventName, (event) => player.pointers.delete(event.pointerId));
+    }
+    button.addEventListener('click', (event) => {
+      if (event.detail === 0) answer(player, choice);
+    });
+  });
+  return player;
+});
+
+function shuffle(items) {
+  const result = [...items];
+  for (let index = result.length - 1; index > 0; index--) {
+    const other = Math.floor(Math.random() * (index + 1));
+    [result[index], result[other]] = [result[other], result[index]];
+  }
+  return result;
+}
+
+function createDeck() {
+  const groups = categories.map((_, category) =>
+    shuffle(questionBank.filter((item) => item.category === category)));
+  const rounds = Math.max(...groups.map((group) => group.length));
+  return Array.from({length: rounds}, (_, index) =>
+    shuffle(groups.flatMap((group) => group.slice(index, index + 1)))).flat();
+}
+
+function tone(frequency, time, volume = 0.06, delay = 0, {
+  wave = 'sine', fallTo, output = audio?.destination
+} = {}) {
+  if (!audio || audio.state !== 'running') return;
+  const start = audio.currentTime + delay;
+  const oscillator = audio.createOscillator();
+  const envelope = audio.createGain();
+  oscillator.type = wave;
+  oscillator.frequency.setValueAtTime(frequency, start);
+  if (fallTo) oscillator.frequency.exponentialRampToValueAtTime(fallTo, start + time);
+  envelope.gain.setValueAtTime(0.001, start);
+  envelope.gain.exponentialRampToValueAtTime(volume, start + 0.02);
+  envelope.gain.exponentialRampToValueAtTime(0.001, start + time);
+  oscillator.connect(envelope).connect(output);
+  oscillator.start(start);
+  oscillator.stop(start + time + 0.02);
+}
+
+function prepareAudio() {
+  const Audio = window.AudioContext || window.webkitAudioContext;
+  if (!Audio) return;
+  audio ??= new Audio();
+  audio.resume().catch(() => {});
+}
+
+function effectsEnabled() {
+  return byId('effectsButton').getAttribute('aria-pressed') === 'true';
+}
+
+function percussion(cutoff, decay, volume) {
+  if (!drumNoise) {
+    drumNoise = audio.createBuffer(1, Math.ceil(audio.sampleRate * 0.15), audio.sampleRate);
+    const samples = drumNoise.getChannelData(0);
+    for (let index = 0; index < samples.length; index++) {
+      samples[index] = Math.random() * 2 - 1;
+    }
+  }
+  const start = audio.currentTime;
+  const noise = audio.createBufferSource();
+  const filter = audio.createBiquadFilter();
+  const envelope = audio.createGain();
+  noise.buffer = drumNoise;
+  filter.type = 'highpass';
+  filter.frequency.value = cutoff;
+  envelope.gain.setValueAtTime(volume, start);
+  envelope.gain.exponentialRampToValueAtTime(0.001, start + decay);
+  noise.connect(filter).connect(envelope).connect(musicBus);
+  noise.start(start);
+  noise.stop(start + decay);
+}
+
+function stopMusic() {
+  clearTimeout(musicTimer);
+  musicBus?.disconnect();
+  musicBus = undefined;
+}
+
+function startMusic() {
+  if (!audio || phase !== 'playing' || byId('musicButton').getAttribute('aria-pressed') !== 'true') return;
+  musicBus = audio.createGain();
+  musicBus.gain.value = 0.65;
+  musicBus.connect(audio.destination);
+  const bassRoots = [82.41, 65.41, 55, 61.74];
+  const bassPattern = [1, 1, 0, 1, 1, 2, 0, 1, 1, 0, 1, 1, 1, 0, 2, 1];
+  const leadPattern = [12, null, 12, 15, null, 12, 19, null, 18, null, 17, 15, null, 12, 11, null];
+  const tempoChange = deadline - 10_000;
+  let step = 0;
+  let nextBeatAt = performance.now();
+
+  function playStep() {
+    const now = performance.now();
+    if (phase !== 'playing' || !musicBus || now >= deadline) return;
+    const finalSeconds = now >= tempoChange;
+    const stepLength = 60_000 / ((finalSeconds ? 192 : 156) * 4);
+    if (audio.state === 'running') playVoices(finalSeconds, stepLength / 1000);
+    step++;
+    if (now - nextBeatAt >= stepLength) nextBeatAt = now;
+    nextBeatAt += stepLength;
+    if (!finalSeconds) nextBeatAt = Math.min(nextBeatAt, tempoChange);
+    if (nextBeatAt < deadline) {
+      musicTimer = setTimeout(playStep, Math.max(1, Math.ceil(nextBeatAt - performance.now())));
+    }
+  }
+
+  function playVoices(finalSeconds, stepSeconds) {
+    const beat = step % 16;
+    if (beat % 4 === 0 || beat === 10 || (finalSeconds && beat % 4 === 2)) {
+      tone(132, 0.12, 0.16, 0, {fallTo: 43, output: musicBus});
+    }
+    if (beat === 4 || beat === 12) percussion(1550, 0.105, 0.085);
+    if (beat % 2 === 0 || finalSeconds) {
+      percussion(7000, 0.038, beat % 4 === 2 ? 0.043 : 0.025);
+    }
+    const root = bassRoots[Math.floor(step / 16) % bassRoots.length];
+    if (bassPattern[beat]) {
+      tone(root * bassPattern[beat], stepSeconds * 0.88, 0.087, 0, {
+        wave: 'triangle', output: musicBus
+      });
+    }
+    const semitones = leadPattern[beat];
+    if (semitones !== null) {
+      tone(root * 2 ** (1 + semitones / 12), stepSeconds * 0.8, 0.033, 0, {
+        wave: beat % 4 === 0 ? 'sawtooth' : 'triangle', output: musicBus
+      });
+    }
+  }
+
+  playStep();
+}
+
+function renderQuestion(player) {
+  const inUse = new Set(activePlayers.map((other) => other.current));
+  const available = player.queue.findIndex((item) => !inUse.has(item));
+  player.current = available < 0 ? null : player.queue.splice(available, 1)[0];
+  player.revision++;
+  player.pointers.clear();
+  const item = player.current;
+  player.question.textContent = item?.prompt ?? (player.queue.length ? '다음 문제를 기다려요.' : '준비된 문제를 모두 풀었어요.');
+  player.number.textContent = item ? `${player.position + 1}번 문제` : player.queue.length ? '대기' : '완료';
+  player.answers.hidden = !item;
+  for (const button of player.buttons) {
+    button.disabled = !item;
+    button.className = 'answer';
+  }
+}
+
+function advance(player) {
+  player.position++;
+  player.current = null;
+  renderQuestion(player);
+  for (const other of activePlayers) {
+    if (other !== player && !other.current && other.queue.length) renderQuestion(other);
+  }
+}
+
+function answer(player, choice) {
+  if (phase !== 'playing' || player.locked || performance.now() >= deadline) return;
+  const item = player.current;
+  if (!item) return;
+  const correct = choice === item.category;
+  player.score += correct ? 2 : -1;
+  player.scoreView.textContent = player.score;
+  player.feedback.className = correct ? 'feedback good' : 'feedback bad';
+  player.feedback.textContent = correct ? '정답! +2점' : `−1점 · 정답은 ${categories[item.category]}`;
+  if (effectsEnabled()) tone(correct ? 660 : 245, 0.14, 0.04);
+  if (correct) {
+    clearTimeout(player.timer);
+    advance(player);
+    player.timer = setTimeout(() => { player.feedback.textContent = ''; }, 700);
+    return;
+  }
+  clearTimeout(player.timer);
+  player.locked = true;
+  player.buttons.forEach((button) => { button.disabled = true; });
+  player.buttons[choice].classList.add('wrong');
+  player.buttons[item.category].classList.add('correct');
+  player.timer = setTimeout(() => {
+    if (phase !== 'playing' || performance.now() >= deadline) return;
+    player.locked = false;
+    player.feedback.textContent = '';
+    advance(player);
+  }, feedbackDelay);
+}
+
+function paintClock(remaining) {
+  const seconds = String(Math.ceil(remaining / 1000));
+  if (byId('seconds').textContent !== seconds) {
+    byId('seconds').textContent = seconds;
+    byId('seconds').setAttribute('aria-label', `남은 시간 ${seconds}초`);
+  }
+  byId('progress').style.transform = `scaleX(${remaining / duration})`;
+  byId('clock').classList.toggle('urgent', remaining <= 10_000);
+}
+
+function tick(now) {
+  const remaining = Math.max(0, deadline - now);
+  paintClock(remaining);
+  if (remaining === 0) finish();
+  else animation = requestAnimationFrame(tick);
+}
+
+function setView(next) {
+  phase = next;
+  const setup = next === 'setup';
+  const finished = next === 'finished';
+  arena.hidden = finished;
+  byId('rules').hidden = !setup;
+  byId('start').hidden = !setup;
+  byId('again').hidden = !finished;
+  byId('changeCount').hidden = !finished;
+  byId('countControl').hidden = !setup;
+  byId('endTitle').hidden = !finished;
+  byId('results').hidden = !finished;
+  byId('bankButton').disabled = next === 'playing';
+  for (const player of players) {
+    player.waiting.hidden = !setup;
+    player.number.hidden = setup;
+    player.question.hidden = setup;
+    player.feedback.hidden = setup;
+    player.answers.hidden = setup;
+  }
+}
+
+function startRound() {
+  prepareAudio();
+  updatePlayerCount();
+  setView('playing');
+  activePlayers.forEach((player) => {
+    clearTimeout(player.timer);
+    player.queue = createDeck();
+    player.current = null;
+    player.score = 0;
+    player.position = 0;
+    player.locked = false;
+    player.scoreView.textContent = '0';
+    player.feedback.textContent = '';
+  });
+  activePlayers.forEach(renderQuestion);
+  byId('status').textContent = '대결 중 · 전도 · 대류 · 복사';
+  paintClock(duration);
+  deadline = performance.now() + duration;
+  startMusic();
+  if (effectsEnabled()) {
+    tone(390, 0.14);
+    tone(585, 0.18, 0.06, 0.12);
+  }
+  animation = requestAnimationFrame(tick);
+}
+
+function finish() {
+  cancelAnimationFrame(animation);
+  stopMusic();
+  players.forEach((player) => {
+    clearTimeout(player.timer);
+    player.pointers.clear();
+  });
+  setView('finished');
+  byId('status').textContent = '시간 종료';
+  if (effectsEnabled()) {
+    tone(587, 0.23);
+    tone(440, 0.26, 0.06, 0.18);
+  }
+  const standings = [...activePlayers].sort((a, b) => b.score - a.score);
+  const scores = standings.map((player) => player.score);
+  const results = byId('results');
+  results.replaceChildren();
+  standings.forEach((player) => {
+    const rank = scores.indexOf(player.score) + 1;
+    const shared = scores.indexOf(player.score) !== scores.lastIndexOf(player.score);
+    const row = document.createElement('li');
+    const place = document.createElement('b');
+    const name = document.createElement('span');
+    const points = document.createElement('strong');
+    place.textContent = `${shared ? '공동 ' : ''}${rank}위`;
+    name.textContent = player.title.textContent;
+    points.textContent = `${player.score}점`;
+    row.append(place, name, points);
+    results.append(row);
+  });
+}
+
+function updatePlayerCount() {
+  const count = Number(countSelect.value);
+  activePlayers = players.slice(0, count);
+  players.forEach(({card}, index) => { card.hidden = index >= count; });
+  arena.style.gridTemplateColumns = `repeat(${count}, minmax(0, 1fr))`;
+  arena.classList.toggle('crowded', count >= 5);
+}
+
+function setup() {
+  setView('setup');
+  updatePlayerCount();
+  paintClock(duration);
+  byId('status').textContent = '전도 · 대류 · 복사';
+  players.forEach((player) => { player.scoreView.textContent = '0'; });
+}
+
+countSelect.addEventListener('change', updatePlayerCount);
+byId('start').addEventListener('click', startRound);
+byId('again').addEventListener('click', startRound);
+byId('changeCount').addEventListener('click', setup);
+byId('bankButton').addEventListener('click', () => byId('bankDialog').showModal());
+byId('screenButton').addEventListener('click', async () => {
+  try {
+    if (document.fullscreenElement) await document.exitFullscreen();
+    else await document.documentElement.requestFullscreen();
+  } catch {
+    byId('screenButton').textContent = '전체 화면은 F11';
+  }
+});
+document.addEventListener('fullscreenchange', () => {
+  byId('screenButton').textContent = document.fullscreenElement ? '전체 화면 나가기' : '전체 화면';
+});
+for (const id of ['effectsButton', 'musicButton']) {
+  const button = byId(id);
+  button.addEventListener('click', () => {
+    const enabled = button.getAttribute('aria-pressed') !== 'true';
+    button.setAttribute('aria-pressed', String(enabled));
+    if (enabled) prepareAudio();
+    if (id === 'musicButton') {
+      if (enabled) startMusic();
+      else stopMusic();
+    }
+  });
+}
+questionBank.forEach(({prompt, category}) => {
+  const entry = document.createElement('li');
+  const question = document.createElement('strong');
+  const answerText = document.createElement('p');
+  question.textContent = prompt;
+  answerText.textContent = categories[category];
+  entry.append(question, answerText);
+  byId('bankList').append(entry);
+});
+setup();
+</script>
+</body>
+</html>
